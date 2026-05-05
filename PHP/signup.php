@@ -1,109 +1,119 @@
-<?php include('server.php') ?>
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8">
-    <title>Signup</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
-  </head>
-  <body>
-      <nav class="navbar navbar-expand-sm bg-light" id="navv">
-      <div class="container">
-      <div class="navbar-header">
-        <a href="index.php" class='navbar-brand'><img src="logo.png" style="width:38px;height:38px;">    Home</a>
-      </div>
-      <ul class="navbar-nav">
-    <li class="nav-item">
-      <a class="nav-link" href="login.php">Login</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="contact.php">Contact Us</a>
-    </li>
-    <li>
-      <!-- <a class="nav-item nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Disabled</a> -->
-    </li>
-  </ul>
-      </div>
-    </nav>
-    <div class="container">
+<?php
+require_once __DIR__ . '/config/auth.php';
 
-    <div class="container">
+$page_title = 'Sign up';
+$active_nav = null;
+$errors = [];
+$name = $email = $designation = '';
+$dob  = '';
 
-    <div class="card">
-    <article class="card-body">
-    	<h4 class="card-title text-center mb-4 mt-1">Sign up</h4>
-    	<hr>
-    	<form action="signup.php" method="post">
-        <?php include('errors.php'); ?><br>
-      <div class="form-group">
-        <!-- <p>Please wait for 2-4 working days to manually verify with your details with records</p> -->
-    	<div class="input-group">
-    		<div class="input-group-prepend">
-    		    <span class="input-group-text"> <i class="fa fa-user">Name</i> </span>
-    		 </div>
-    		<input name="name" class="form-control" placeholder="Name" value="<?php echo $name; ?>"type="text" required>
-    	</div>
-    	</div>
-      <div class="form-group">
-      <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text"> <i class="fa fa-user">Email</i> </span>
-         </div>
-        <input name="email" class="form-control" placeholder="Email" value="<?php echo $email; ?>" type="email" required>
-      </div>
-      </div>
-      <div class="form-group">
-      <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text"> <i class="fa fa-user">DOB</i> </span>
-         </div>
-        <input name="dob" class="form-control" placeholder="Date of Birth" type="date" value="<?php echo $dob;?>" required>
-      </div>
-      </div>
-      <div class="form-group">
-    	<div class="input-group">
-    		<div class="input-group-prepend">
-    		    <span class="input-group-text"> <i class="fa fa-user">Designation</i> </span>
-    		 </div>
-    		<input name="desig" class="form-control" placeholder="Designation" type="text" value="<?php echo $desig;?>" required>
-    	</div>
-    	</div>
-    	<div class="form-group">
-    	<div class="input-group">
-    		<div class="input-group-prepend">
-    		    <span class="input-group-text"> <i class="fa fa-lock">Password</i> </span>
-    		 </div>
-    	    <input name="password" class="form-control" placeholder="password" type="password" required>
-    	</div>
-    	</div>
-      <div class="form-group">
-    	<div class="input-group">
-    		<div class="input-group-prepend">
-    		    <span class="input-group-text"> <i class="fa fa-user">Confirm-Password</i> </span>
-    		 </div>
-    		<input name="cpassword" class="form-control" placeholder="Confirm Password" type="password"required>
-    	</div>
-    	</div>
-      <p>Please wait for 2-4 working days to manually verify your details with records</p>
-      <p>Attach your ID proof and mail to "customersupport@supremecourt.gov.in" with your Email ID as Subject</p>
-    	<div class="form-group">
-    	<button type="submit" class="btn btn-primary btn-block" name="signup"> Sign up </button>
-    	</div>
-    	<!-- <p class="text-center"><a href="forgotpass.html" class="btn">Forgot password?</a></p> -->
-    	</form>
-    </article>
-    </div>
+if (ccms_user()) {
+    ccms_redirect('dashboard.php');
+}
 
-    	<!-- </aside> <!-- col.// -->
-    </div>
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!ccms_csrf_check()) {
+        $errors[] = 'Invalid session token. Please try again.';
+    } else {
+        $name        = trim($_POST['name']        ?? '');
+        $email       = trim($_POST['email']       ?? '');
+        $dob         = trim($_POST['dob']         ?? '');
+        $designation = trim($_POST['designation'] ?? '');
+        $pass        = (string) ($_POST['password']  ?? '');
+        $cpass       = (string) ($_POST['cpassword'] ?? '');
 
+        if ($name === '' || !preg_match('/^[A-Za-z][A-Za-z .\'-]{1,99}$/', $name)) {
+            $errors[] = 'Enter a valid name (letters, spaces, dots, hyphens).';
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Enter a valid email address.';
+        }
+        if ($dob !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+            $errors[] = 'Enter a valid date of birth.';
+        }
+        if ($designation === '' || strlen($designation) > 80) {
+            $errors[] = 'Designation is required.';
+        }
+        if (strlen($pass) < 8) {
+            $errors[] = 'Password must be at least 8 characters.';
+        }
+        if ($pass !== $cpass) {
+            $errors[] = 'Passwords do not match.';
+        }
+
+        if (!$errors) {
+            $db   = ccms_db();
+            $stmt = $db->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                $errors[] = 'An account with this email already exists.';
+            } else {
+                $hash = password_hash($pass, PASSWORD_DEFAULT);
+                $ins  = $db->prepare(
+                    'INSERT INTO users (name, email, password_hash, dob, designation, role)
+                     VALUES (?, ?, ?, ?, ?, "client")'
+                );
+                $ins->execute([
+                    $name,
+                    $email,
+                    $hash,
+                    $dob !== '' ? $dob : null,
+                    $designation,
+                ]);
+                session_regenerate_id(true);
+                $_SESSION['user_id'] = (int) $db->lastInsertId();
+                ccms_flash('success', 'Account created. Welcome to CCMS!');
+                ccms_redirect('dashboard.php');
+            }
+        }
+    }
+}
+
+include __DIR__ . '/includes/header.php';
+?>
+
+<div class="auth-shell">
+  <div class="card">
+    <h4 class="text-center"><i class="bi bi-person-plus"></i> Create an account</h4>
+    <?php include __DIR__ . '/includes/errors.php'; ?>
+    <form method="post" action="signup.php" novalidate>
+      <?= ccms_csrf_field() ?>
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input name="name" type="text" class="form-control" value="<?= ccms_e($name) ?>" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input name="email" type="email" class="form-control" value="<?= ccms_e($email) ?>" required>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Date of birth</label>
+          <input name="dob" type="date" class="form-control" value="<?= ccms_e($dob) ?>">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Designation</label>
+          <input name="designation" type="text" class="form-control"
+                 value="<?= ccms_e($designation) ?>" placeholder="Client / Advocate / Junior" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Password</label>
+          <input name="password" type="password" class="form-control" minlength="8" required>
+          <div class="form-text">At least 8 characters.</div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Confirm password</label>
+          <input name="cpassword" type="password" class="form-control" minlength="8" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Create account</button>
+      <div class="text-center mt-3 small">
+        <a href="login.php">Already have an account? Sign in →</a>
+      </div>
+    </form>
   </div>
+</div>
 
-    <br><br><br>
-
-
-  </body>
-</html>
+<?php include __DIR__ . '/includes/footer.php'; ?>
